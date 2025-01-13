@@ -1,0 +1,245 @@
+---
+title: "M1 Technique de Programmation"
+author: "HERWEDE Noah, AHMED-YAHIA LAIFA"
+date: "2025-01-13"
+output:
+  ioslides_presentation:
+    self_contained: true
+---
+
+## R Présentation du Projet
+
+Développer une application Shiny en R pour les joueurs d'échecs amateurs ou occasionnels et les aider dans leur progression
+
+**Objectif du projet** : **Objectif du projet** :
+
+-   I Recupérer les données sur les joueurs
+
+-   II Estimer le niveau des joueurs
+
+-   III Proposer une solution pour les aider à progresser
+
+## I Récupérer les données des joueurs
+
+-   Pour ce faire, nous utiliserons les donnée de deux sites : **Chess.com** & **Lichess.com**
+
+-   Les deux sites disposent d**'API** en lecture seule sans clé d'authentification
+
+    ***Fonction de récolte des données***
+
+```{r Fonction chess.com, echo=TRUE, message=FALSE, warning=FALSE, results='hide'}
+
+get_chess_com_player <- function(username) {
+  base_url <- paste0("https://api.chess.com/pub/player/", username)
+  response <- GET(base_url)
+  if (status_code(response) == 200) {
+    return(fromJSON(rawToChar(response$content)))
+  }
+  return(NULL)
+}
+
+```
+
+## I.1 Récupérer les données des joueurs (Interface)
+
+Avec les fonctions pour récupérer les informations, il nous faut alors récupérer le pseudo
+
+![](image_markdown/profile.png){width="534"}
+
+## I.2 Récupérer les données des joueurs
+
+Fonction de séparation du code par cadence pour préparer les données à l'estimation
+
+```{r séparation par Cadence, echo=TRUE, message=FALSE, warning=FALSE,eval=FALSE, results='hide'}
+
+get_player_ratings <- function(chess_data, lichess_data) {
+  ratings <- list(chess = list(), lichess = list())
+  
+# Chess.com ratings
+if (!is.null(chess_data) && !is.null(chess_data$complete_stats)) {
+if (!is.null(chess_data$complete_stats$chess_bullet)) {
+ratings$chess$bullet <- chess_data$complete_stats$chess_bullet$last$rating
+    }
+if (!is.null(chess_data$complete_stats$chess_blitz)) {
+ ratings$chess$blitz <- chess_data$complete_stats$chess_blitz$last$rating
+ }
+if (!is.null(chess_data$complete_stats$chess_rapid)) {
+ratings$chess$rapid <- chess_data$complete_stats$chess_rapid$last$rating
+    }
+  }
+```
+
+## I.3 Récupérer les données des joueurs
+
+Après avoir récupéré les informations qui nous intéressent, nous avons ajouté la possibilité pour les joueurs de se représenter graphiquement les statistiques de leur compte
+
+![](image_markdown/Graph.png){width="551"}
+
+## II.1 Estimer le niveau des joueurs
+
+Pour estimer le niveau de nos joueurs, nous nous baserons sur la norme des échecs L'Elo Fide et les données de (<https://chessgoals.com/>)
+
+|                |                |             |
+|----------------|----------------|-------------|
+|                | Multiplicateur | Intercept   |
+| FIDE           | 0.7483619932   | 435.6301053 |
+| Lichess-Blitz  | 0.7658478335   | 616.0098942 |
+| Lichess-Bullet | 0.8660009037   | 373.1784651 |
+| Lichess-Rapid  | 0.6298191743   | 948.7785739 |
+
+## II.2 Estimer le niveau des joueurs (Ex)
+
+Pour estimer un Elo FIDE à partir d'un Elo Chess.com-Bullet :
+
+Prenons un Elo Chess.com-Bullet de **1500**. , avec la formule suivante
+
+|                                                           |
+|-----------------------------------------------------------|
+| ***Elo estimé =(Multiplicateur×Elo donnée) + Intercept*** |
+
+|                                                        |
+|--------------------------------------------------------|
+| ***Elo estimé = (1.03651 x 1500 ) - 112.4543 = 1442*** |
+
+## II.3 Estimer le niveau des joueurs (C)
+
+En version code nous avons
+
+```{r Exemple calcul, echo=TRUE, message=FALSE, warning=FALSE,eval=FALSE}
+estimate_fide_from_lichess <- function(lichess_elo, game_type) {
+  # Définition des coefficients pour Lichess
+  coefficients <- list(
+    bullet = list(slope = 0.8660009037, intercept = 373.1784651),
+    blitz = list(slope = 0.7658478335, intercept = 616.0098942),
+    rapid = list(slope = 0.6298191743, intercept = 948.7785739),
+    classical = list(slope = 0.5264331886, intercept = 1070.387055)
+  )
+```
+
+## II.4 Estimer le niveau des joueurs (D)
+
+![](image_markdown/fide.png){width="652"}
+
+## III Proposer une solution pour aider les joueurs
+
+**Google Book :**
+
+-   **Fonctionnalité principale** : Recherche de livres en ligne via des mots-clés, avec récupération d'informations comme le titre, l'auteur, la description et la date de publication.
+
+-   **Utilisation** : Envoi de requêtes HTTP pour obtenir des suggestions personnalisées (ex. : livres d'échecs adaptés à un Elo spécifique).
+
+## III.1 Proposer une solution
+
+*Exemple de demande:*
+
+```{r recherche des livre, echo=TRUE, message=FALSE, warning=FALSE,eval=FALSE}
+search_chess_books <- function(query, api_key) {
+  base_url <- "https://www.googleapis.com/books/v1/volumes"
+
+  # Construire la requête
+  full_query <- paste(query, "chess", sep = " ")
+  
+  # Faire la requête à l'API
+  response <- GET(
+    url = base_url,
+    query = list(
+      q = full_query,
+      key = api_key,
+      maxResults = 10
+    ) ) 
+```
+
+|                                            |
+|--------------------------------------------|
+| q = full_query (Recherche) , key = api_key |
+
+## III.2 Proposer une solution
+
+Détermination des termes de recherche en fonction du niveau estimé des joueurs
+
+|               |               |                                   |
+|---------------|---------------|-----------------------------------|
+| Débutant      | \< 1200 Elo   | Beginner chess book               |
+| Intermédiaire | 1200-1599 Elo | Intermediate chess book , Tactics |
+| Avancé        | 1600-1999 Elo | Advanced chess strategy           |
+| Maître        | 2000-2399     | Master Chess etc ...              |
+
+## III.3 Proposer une solution (C)
+
+```{r determination des terme de recherche, echo=TRUE, message=FALSE, warning=FALSE,eval=FALSE}
+# Déterminer le terme de recherche en fonction du niveau
+search_term <- if (!is.null(fide_estimate)) {
+  if (fide_estimate < 1200) {
+    "beginner chess book"
+  } else if (fide_estimate < 1600) {
+    "intermediate chess book"
+  } else if (fide_estimate < 2000) {
+    "advanced chess strategy"
+  } else if (fide_estimate < 2400) {
+    "master chess strategy"
+  } else {
+    "grandmaster chess"
+  }
+} else {
+  "chess book"  # terme par défaut si pas d'estimation
+}
+```
+
+## III.4 Proposer une solution (D)
+
+![](image_markdown/livre.png){width="653"}
+
+## III.5 Proposer une solution
+
+Code de l'Echiquier d'analyse
+
+```{r code Tableau Lichess , echo=TRUE, message=FALSE, warning=FALSE,eval=FALSE}
+nav_panel(
+    title = "Echiquier d'Analyse",
+    card(
+      full_screen = TRUE,
+      card_header(class = "bg-primary text-white"
+                  , "Echiquier d'Analyse Lichess"),
+      card_body(
+        tags$iframe(
+          src = "https://lichess.org/analysis/embed",
+          width = "100%",
+          height = "800px",
+          style = "border: none; border-radius: 10px;"
+        )
+      )
+    )
+  )
+```
+
+## III.6 Proposer une solution(D)
+
+![](image_markdown/lichess.png){width="624"}
+
+## IV Conclusion & Discussion
+
+-   **Objectif atteint** :
+
+    -   Récupérer automatiquement les données des joueurs depuis Chess.com et Lichess à partir d’un pseudo.
+
+    -   Estimer un niveau FIDE via des modèles de régression.
+
+    -   Recommander des livres adaptés au niveau de l’utilisateur grâce à l’API Google Books.
+
+-   **Avantage** : Une solution intégrée pour évaluer les performances et proposer des outils d’amélioration personnalisés.
+
+## IV.1 Conclusion & Discussion
+
+**Améliorations Possible**
+
+-   Nouvelles plateformes , Affinement des modèles
+
+-   Personnalisation utilisateur , Optimisation du code
+
+Difficultés rencontrées
+
+-   Scraping sans API
+
+-   Limites API
+
+-   Uniformisation des données
