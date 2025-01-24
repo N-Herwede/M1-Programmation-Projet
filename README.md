@@ -1,6 +1,6 @@
 
 
-#Pour faire fonctionner ce programme, il faut :
+## Pour faire fonctionner ce programme, il faut :
 
 - Importer `app.R` dans R Studio.
 
@@ -12,7 +12,7 @@
 
 - Accédez au tableau de bord "APIs & Services" et cliquez sur "Enable APIs and Services". Recherchez « Books API » et cliquez dessus pour l'activer et le rendre fonctionnel avec vos clés API. Une fois votre clé obtenue, il ne vous reste plus qu'à la saisir dans la section API des paramètres de l'application.
 
-#Utilisation :
+## Utilisation :
 
 - Entrer un pseudo Chess.com dans la boîte de texte et valider pour charger les informations de votre compte Chess.com et/ou Lichess.org (vous avez la possibilité d'importer plusieurs comptes pour les comparer).
 
